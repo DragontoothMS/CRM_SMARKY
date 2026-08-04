@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.dependencies\\).join\\(', '\\)\\)\")",
+      "Bash(grep -oE \"lastMessage: \\\\{ unit: '[a-z]', value: [0-9]+ \\\\}\" src/mocks/seed-conversations.ts)",
+      "Bash(sed \"s/'.*//\")",
+      "Bash(rm -rf /c/Users/yoanm/AppData/Local/Temp/claude/c--Users-yoanm-crm-smarky/09ca3a6a-0073-4887-a948-9c11357bef44/scratchpad/antes)",
+      "Bash(mkdir -p /c/Users/yoanm/AppData/Local/Temp/claude/c--Users-yoanm-crm-smarky/09ca3a6a-0073-4887-a948-9c11357bef44/scratchpad/antes)",
+      "Bash(cd \"c:/Users/yoanm/crm_smarky\")",
+      "Bash(curl -s -o /dev/null -w \"server: %{http_code}\\\\n\" http://localhost:3000/inbox)"
+    ]
+  }
+}
