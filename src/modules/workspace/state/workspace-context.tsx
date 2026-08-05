@@ -11,11 +11,12 @@ import { CONVERSATIONS_QUERY_KEY, fetchConversations } from '@/lib/inbox-data';
 const FULL_POLL = 10000;   // 10s: lista completa
 const ACTIVE_POLL = 3000;   // 3s: solo la conversación activa
 
-interface WorkspaceContextValue {
+export interface WorkspaceContextValue {
   state: WorkspaceState | null;
   dispatch: React.Dispatch<WorkspaceAction>;
   ready: boolean;
   sendMessage: (conversationId: string, text: string) => Promise<void>;
+  /** Reenvía a sendMedia con contentType inferido del MIME del file. */
   sendMedia: (conversationId: string, file: File, caption?: string) => Promise<void>;
   setActiveConversationId: (id: string | null) => void;
 }
@@ -198,6 +199,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
     const localId = crypto.randomUUID();
     const mediaUrl = URL.createObjectURL(file);
+    // Inferir contentType del MIME real del file: image/*, video/*, audio/*, application/pdf.
+    const contentType = file.type.startsWith('image/')
+      ? 'image'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : file.type.startsWith('audio/')
+          ? 'audio'
+          : 'document';
     const createdAt = new Date().toISOString();
 
     dispatch({
@@ -205,7 +214,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       conversationId,
       text: caption,
       mediaUrl,
-      contentType: 'image',
+      contentType,
       fileName: file.name,
       messageId: localId,
       createdAt,
@@ -234,7 +243,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           to,
           caption: caption || '',
-          type: 'image',
+          type: contentType,
           ...(mediaId ? { mediaId } : {}),
         }),
       });

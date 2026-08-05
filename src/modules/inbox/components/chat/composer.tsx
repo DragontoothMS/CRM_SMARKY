@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Paperclip, SendHorizonal, X } from 'lucide-react';
+import { Paperclip, Music, SendHorizonal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,11 +20,14 @@ export function Composer({
   const { dispatch } = useInbox();
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const windowClosed = sessionWindow.applies && !sessionWindow.isOpen;
   const canSend = text.trim().length > 0 && !windowClosed;
   const canSendImage = selectedImage !== null && !windowClosed;
+  const canSendAudio = selectedAudio !== null && !windowClosed;
 
   function handleSend() {
     if (!canSend) return;
@@ -45,9 +48,21 @@ export function Composer({
     }
   }
 
+  function handleAudioSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      setSelectedAudio(file);
+    }
+  }
+
   function handleRemoveImage() {
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleRemoveAudio() {
+    setSelectedAudio(null);
+    if (audioInputRef.current) audioInputRef.current.value = '';
   }
 
   async function handleSendImage() {
@@ -61,6 +76,19 @@ export function Composer({
     setText('');
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function handleSendAudio() {
+    if (!selectedAudio || !canSendAudio) return;
+    dispatch({
+      type: 'SEND_MEDIA' as const,
+      conversationId,
+      file: selectedAudio,
+      caption: text.trim(),
+    });
+    setText('');
+    setSelectedAudio(null);
+    if (audioInputRef.current) audioInputRef.current.value = '';
   }
 
   return (
@@ -84,12 +112,36 @@ export function Composer({
           />
           <TooltipContent>Adjuntar imagen</TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-10 shrink-0"
+                disabled={windowClosed}
+                onClick={() => audioInputRef.current?.click()}
+              >
+                <Music className="size-[18px]" />
+                <span className="sr-only">Adjuntar audio</span>
+              </Button>
+            }
+          />
+          <TooltipContent>Adjuntar audio</TooltipContent>
+        </Tooltip>
 
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleImageSelect}
+          className="hidden"
+        />
+        <input
+          ref={audioInputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleAudioSelect}
           className="hidden"
         />
 
@@ -107,6 +159,19 @@ export function Composer({
               type="button"
               onClick={handleRemoveImage}
               className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        )}
+        {selectedAudio && (
+          <div className="relative flex items-center gap-2 rounded-lg border border-border px-2 py-1.5">
+            <Music className="size-4 text-muted-foreground" />
+            <span className="max-w-[8rem] truncate text-xs">{selectedAudio.name}</span>
+            <button
+              type="button"
+              onClick={handleRemoveAudio}
+              className="rounded-full bg-destructive p-0.5 text-white"
             >
               <X className="size-3" />
             </button>
@@ -138,8 +203,8 @@ export function Composer({
           type="button"
           size="icon"
           className="size-10 shrink-0"
-          onClick={selectedImage ? handleSendImage : handleSend}
-          disabled={selectedImage ? !canSendImage : !canSend}
+          onClick={selectedAudio ? handleSendAudio : selectedImage ? handleSendImage : handleSend}
+          disabled={selectedAudio ? !canSendAudio : selectedImage ? !canSendImage : !canSend}
         >
           <SendHorizonal className="size-[18px]" />
           <span className="sr-only">Enviar</span>
