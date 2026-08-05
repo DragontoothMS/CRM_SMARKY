@@ -54,7 +54,7 @@ function platformApiUrl(path: string): string {
   return `${getKapsoApiBaseUrl()}/platform/v1${path}`;
 }
 
-function getKapsoApiKey(): string {
+export function getKapsoApiKey(): string {
   const apiKey = process.env.KAPSO_API_KEY;
   if (!apiKey) {
     throw new InboxConfigurationError('KAPSO_API_KEY environment variable is not set', 500);

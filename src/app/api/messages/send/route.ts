@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       recipient_type: 'individual',
       to,
       type,
+      ...(phoneNumberId ? { phone_number_id: phoneNumberId } : {}),
     };
 
     if (type === 'text') {
