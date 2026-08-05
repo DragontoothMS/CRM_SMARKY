@@ -1,61 +1,85 @@
 import { NextResponse } from 'next/server';
+import { whatsappClient } from '@/lib/whatsapp-client';
+import { resolvePhoneNumberContext } from '@/lib/inbox-settings';
 
-const KAPSO_API_BASE = 'https://api.kapso.ai';
-const KAPSO_API_KEY = process.env.KAPSO_API_KEY || '';
-
+/**
+ * Envío de mensajes a WhatsApp vía Kapso SDK (whatsappClient.messages.*).
+ * El SDK construye la URL correcta con graphVersion y adjunta X-API-Key.
+ * Media API nativa de Kapso: upload → media_id → sendImage({ image: { id } }).
+ */
 export async function POST(request: Request) {
   try {
-    const { phoneNumberId: rawPhoneNumberId, to, body, type = 'text', mediaId } = await request.json();
-
-    if (!to || !body) {
-      return NextResponse.json({ error: 'Missing required fields: to, body' }, { status: 400 });
-    }
-
-    if (!KAPSO_API_KEY) {
-      return NextResponse.json({ error: 'KAPSO_API_KEY not configured' }, { status: 500 });
-    }
-
-    const phoneNumberId = rawPhoneNumberId || process.env.PHONE_NUMBER_ID || '';
-    if (!phoneNumberId) {
-      return NextResponse.json({ error: 'No phone number configured' }, { status: 500 });
-    }
-
-    const apiUrl = `${KAPSO_API_BASE}/meta/whatsapp/v24.0/${phoneNumberId}/messages`;
-
-    const payload: Record<string, unknown> = {
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to,
-      type,
-      ...(phoneNumberId ? { phone_number_id: phoneNumberId } : {}),
+    const payload = (await request.json()) as {
+      phoneNumberId?: string;
+      to: string;
+      type?: string;
+      body?: string;
+      caption?: string;
+      mediaId?: string;
+      filename?: string;
+      preview_url?: boolean;
     };
 
-    if (type === 'text') {
-      payload.text = { body, preview_url: false };
-    } else if (type === 'template') {
-      payload.template = body;
-    } else if (['image', 'video', 'audio', 'document'].includes(type) && mediaId) {
-      payload[type] = { id: mediaId, caption: body };
-    } else {
-      payload.text = { body, preview_url: false };
+    if (!payload.to) {
+      return NextResponse.json({ error: 'Missing required field: to' }, { status: 400 });
     }
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': KAPSO_API_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
+    const phoneNumber = await resolvePhoneNumberContext(payload.phoneNumberId || undefined);
+    const phoneNumberId = phoneNumber.phone_number_id;
+    const type = payload.type || 'text';
 
-    const data = await response.json();
+    let data: unknown;
+
+    if (type === 'text') {
+      const res = await whatsappClient.messages.sendText({
+        phoneNumberId,
+        to: payload.to,
+        body: payload.body || payload.caption || '',
+        previewUrl: payload.preview_url ?? false,
+      });
+      data = res;
+    } else if (type === 'image') {
+      if (!payload.mediaId) {
+        return NextResponse.json({ error: 'mediaId required for image' }, { status: 400 });
+      }
+      const res = await whatsappClient.messages.sendImage({
+        phoneNumberId,
+        to: payload.to,
+        image: { id: payload.mediaId, caption: payload.caption || undefined },
+      });
+      data = res;
+    } else if (type === 'video') {
+      if (!payload.mediaId) return NextResponse.json({ error: 'mediaId required for video' }, { status: 400 });
+      const res = await whatsappClient.messages.sendVideo({
+        phoneNumberId,
+        to: payload.to,
+        video: { id: payload.mediaId, caption: payload.caption || undefined },
+      });
+      data = res;
+    } else if (type === 'document') {
+      if (!payload.mediaId) return NextResponse.json({ error: 'mediaId required for document' }, { status: 400 });
+      const res = await whatsappClient.messages.sendDocument({
+        phoneNumberId,
+        to: payload.to,
+        document: { id: payload.mediaId, caption: payload.caption || undefined, filename: payload.filename || undefined },
+      });
+      data = res;
+    } else if (type === 'audio') {
+      if (!payload.mediaId) return NextResponse.json({ error: 'mediaId required for audio' }, { status: 400 });
+      const res = await whatsappClient.messages.sendAudio({
+        phoneNumberId,
+        to: payload.to,
+        audio: { id: payload.mediaId },
+      });
+      data = res;
+    } else {
+      return NextResponse.json({ error: `Unsupported type: ${type}` }, { status: 400 });
+    }
+
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error sending message:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send message' },
-      { status: 500 },
-    );
+    console.error('[messages/send] error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to send message';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

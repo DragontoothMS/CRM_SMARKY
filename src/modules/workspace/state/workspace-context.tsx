@@ -226,14 +226,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
     } catch { /* upload falló, intenta directo con Kapso */ }
 
-    // 2. Enviar por Kapso
+    // 2. Enviar por Kapso (SDK vía /api/messages/send)
     try {
       const res = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to,
-          body: caption || '',
+          caption: caption || '',
           type: 'image',
           ...(mediaId ? { mediaId } : {}),
         }),
