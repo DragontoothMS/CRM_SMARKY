@@ -1,9 +1,9 @@
 'use client';
 
 import { useContext } from 'react';
-import { InboxContext, type InboxContextValue } from '../state/inbox-context';
+import { InboxContext } from '../state/inbox-context';
 
-export function useInbox(): InboxContextValue {
+export function useInbox() {
   const context = useContext(InboxContext);
   if (!context) throw new Error('useInbox debe usarse dentro de <InboxProvider>');
   return context;

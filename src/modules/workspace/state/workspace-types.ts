@@ -119,6 +119,7 @@ export type WorkspaceAction =
   | { type: 'SET_STAGE'; contactId: string; stageId: string }
   | { type: 'ADD_NOTE'; conversationId: string; body: string; noteId: string; createdAt: string }
   | { type: 'UPDATE_MESSAGE_ID'; conversationId: string; oldId: string; newId: string; externalId: string }
+  | { type: 'FAIL_MESSAGE'; conversationId: string; messageId: string }
   | { type: 'CREATE_CAMPAIGN'; payload: CreateCampaignInput }
   | { type: 'UPDATE_CAMPAIGN'; payload: UpdateCampaignInput }
   | { type: 'CANCEL_CAMPAIGN'; campaignId: string }

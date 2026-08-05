@@ -73,14 +73,30 @@ export function phoneThreadMessagesQueryKey(
 }
 
 export async function fetchConversations(): Promise<Conversation[]> {
-  const response = await fetch('/api/conversations?status=active&limit=100');
-  const data = await response.json();
+  // WhatsApp cierra conversaciones rápidamente (status='ended'), así que
+  // primero intentamos con status=active. Si trae vacío, reintentamos sin filtro
+  // para que el CRM vea conversaciones reales.
+  const tryStatuses = ['active', 'all'] as const;
 
-  if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch conversations');
+  for (const status of tryStatuses) {
+    const url = status === 'all'
+      ? '/api/conversations?limit=100'
+      : `/api/conversations?status=${status}&limit=100`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch conversations');
+    }
+
+    const convs = data.data || [];
+    if (convs.length > 0) {
+      return convs;
+    }
   }
 
-  return data.data || [];
+  return [];
 }
 
 export async function fetchConversationMessages(conversationId: string, phoneNumberId?: string): Promise<Message[]> {

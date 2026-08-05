@@ -6,10 +6,9 @@ import { useWorkspace } from '@/modules/workspace/state/workspace-context';
 import { inboxUiReducer, loadPersistedState } from './inbox-reducer';
 import type { InboxAction, InboxState } from './inbox-types';
 
-export interface InboxContextValue {
+interface InboxContextValue {
   state: InboxState;
   dispatch: React.Dispatch<InboxAction>;
-  sendMedia: (file: File, caption?: string) => Promise<void>;
 }
 
 export const InboxContext = createContext<InboxContextValue | null>(null);
@@ -105,11 +104,8 @@ export function InboxProvider({ children, fallback }: { children: ReactNode; fal
     return {
       state: { ...workspace, ...ui, selectedConversationId },
       dispatch: inboxDispatch,
-      sendMedia: (file: File, caption?: string) => {
-        return sendMedia(selectedConversationId ?? '', file, caption ?? '');
-      },
     };
-  }, [workspace, ui, inboxDispatch, sendMedia]);
+  }, [workspace, ui, inboxDispatch]);
 
   if (!value) return <>{fallback}</>;
   return <InboxContext.Provider value={value}>{children}</InboxContext.Provider>;

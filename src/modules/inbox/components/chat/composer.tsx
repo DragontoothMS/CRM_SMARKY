@@ -17,7 +17,7 @@ export function Composer({
   conversationId: string;
   sessionWindow: SessionWindow;
 }) {
-  const { dispatch, sendMedia } = useInbox();
+  const { dispatch } = useInbox();
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +52,12 @@ export function Composer({
 
   async function handleSendImage() {
     if (!selectedImage || !canSendImage) return;
-    await sendMedia(selectedImage, text.trim());
+    dispatch({
+      type: 'SEND_MEDIA' as const,
+      conversationId,
+      file: selectedImage,
+      caption: text.trim(),
+    });
     setText('');
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = '';

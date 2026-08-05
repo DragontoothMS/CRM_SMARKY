@@ -177,6 +177,19 @@ export function workspaceReducer(
       };
     }
 
+    case 'FAIL_MESSAGE': {
+      const msgs = state.messagesByConversation[action.conversationId];
+      if (!msgs) return state;
+      const idx = msgs.findIndex(m => m.id === action.messageId);
+      if (idx === -1) return state;
+      const updated = [...msgs];
+      updated[idx] = { ...updated[idx], status: 'failed' };
+      return {
+        ...state,
+        messagesByConversation: { ...state.messagesByConversation, [action.conversationId]: updated },
+      };
+    }
+
     case 'TOGGLE_AI': {
       const conversation = state.conversations[action.conversationId];
       if (!conversation) return state;

@@ -175,8 +175,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             externalId: kapsoMsgId,
           });
         }
+      } else {
+        dispatch({ type: 'FAIL_MESSAGE', conversationId, messageId: localId });
       }
-    } catch { /* API falló, el mensaje queda como local */ }
+    } catch {
+      dispatch({ type: 'FAIL_MESSAGE', conversationId, messageId: localId });
+    }
   }, [state, dispatch]);
 
   const sendMedia = useCallback(async (
@@ -246,8 +250,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             externalId: kapsoMsgId,
           });
         }
+      } else {
+        dispatch({ type: 'FAIL_MESSAGE', conversationId, messageId: localId });
       }
-    } catch { /* API falló */ }
+    } catch {
+      dispatch({ type: 'FAIL_MESSAGE', conversationId, messageId: localId });
+    }
     finally {
       URL.revokeObjectURL(mediaUrl);
     }
