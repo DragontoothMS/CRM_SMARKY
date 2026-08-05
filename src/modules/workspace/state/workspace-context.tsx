@@ -16,6 +16,7 @@ interface WorkspaceContextValue {
   dispatch: React.Dispatch<WorkspaceAction>;
   ready: boolean;
   sendMessage: (conversationId: string, text: string) => Promise<void>;
+  sendMedia: (conversationId: string, file: File, caption?: string) => Promise<void>;
   setActiveConversationId: (id: string | null) => void;
 }
 
@@ -166,7 +167,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         const kapsoMsgId = data?.messages?.[0]?.id;
         if (kapsoMsgId) {
-          // Reemplazar el UUID local con el ID real de Kapso para evitar duplicados
           dispatch({
             type: 'UPDATE_MESSAGE_ID',
             conversationId,
@@ -179,9 +179,83 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } catch { /* API falló, el mensaje queda como local */ }
   }, [state, dispatch]);
 
+  const sendMedia = useCallback(async (
+    conversationId: string,
+    file: File,
+    caption = '',
+  ) => {
+    const currentState = state;
+    if (!currentState) return;
+    const conv = currentState.conversations[conversationId];
+    if (!conv) return;
+    const contact = currentState.contacts[conv.contactId];
+    const to = contact?.phone || '';
+    if (!to) return;
+
+    const localId = crypto.randomUUID();
+    const mediaUrl = URL.createObjectURL(file);
+    const createdAt = new Date().toISOString();
+
+    dispatch({
+      type: 'SEND_MEDIA',
+      conversationId,
+      text: caption,
+      mediaUrl,
+      contentType: 'image',
+      fileName: file.name,
+      messageId: localId,
+      createdAt,
+    });
+
+    // 1. Subir archivo a CRM (endpoint temporal)
+    let mediaId = '';
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await fetch('/api/media/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        mediaId = uploadData.mediaId || '';
+      }
+    } catch { /* upload falló, intenta directo con Kapso */ }
+
+    // 2. Enviar por Kapso
+    try {
+      const res = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          body: caption || '',
+          type: 'image',
+          ...(mediaId ? { mediaId } : {}),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const kapsoMsgId = data?.messages?.[0]?.id;
+        if (kapsoMsgId) {
+          dispatch({
+            type: 'UPDATE_MESSAGE_ID',
+            conversationId,
+            oldId: localId,
+            newId: kapsoMsgId,
+            externalId: kapsoMsgId,
+          });
+        }
+      }
+    } catch { /* API falló */ }
+    finally {
+      URL.revokeObjectURL(mediaUrl);
+    }
+  }, [state, dispatch]);
+
   const value = useMemo(
-    () => ({ state, dispatch, ready, sendMessage, setActiveConversationId: setActiveConvId }),
-    [state, ready, sendMessage],
+    () => ({ state, dispatch, ready, sendMessage, sendMedia, setActiveConversationId: setActiveConvId }),
+    [state, ready, sendMessage, sendMedia],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

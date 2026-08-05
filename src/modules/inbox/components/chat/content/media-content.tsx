@@ -1,5 +1,7 @@
-import { Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Play, ZoomIn, X } from 'lucide-react';
 import type { Message } from '@/types';
+import { useState } from 'react';
 
 /*
  * Imagen, video, audio y sticker.
@@ -11,16 +13,53 @@ import type { Message } from '@/types';
  */
 
 export function ImageContent({ message }: { message: Message }) {
+  const [showLightbox, setShowLightbox] = useState(false);
+
   return (
-    <figure className="space-y-1.5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={message.mediaUrl}
-        alt=""
-        className="max-h-72 w-full max-w-xs rounded-lg object-cover"
-      />
-      {message.text && <figcaption className="text-sm whitespace-pre-wrap">{message.text}</figcaption>}
-    </figure>
+    <>
+      <figure className="relative group space-y-1.5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={message.mediaUrl}
+          alt=""
+          className="max-h-72 w-full max-w-xs rounded-lg object-cover cursor-pointer transition-opacity group-hover:opacity-90"
+          onClick={() => setShowLightbox(true)}
+          loading="lazy"
+        />
+        {message.text && <figcaption className="text-sm whitespace-pre-wrap">{message.text}</figcaption>}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+          onClick={() => setShowLightbox(true)}
+        >
+          <ZoomIn className="size-4" />
+        </Button>
+      </figure>
+
+      {showLightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setShowLightbox(false)}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-4 right-4 text-white hover:bg-transparent"
+            onClick={() => setShowLightbox(false)}
+          >
+            <X className="size-6" />
+          </Button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={message.mediaUrl}
+            alt=""
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

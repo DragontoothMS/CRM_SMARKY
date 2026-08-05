@@ -103,6 +103,16 @@ export type WorkspaceAction =
       messageId: string;
       createdAt: string;
     }
+  | {
+      type: 'SEND_MEDIA';
+      conversationId: string;
+      text: string;
+      mediaUrl: string;
+      contentType: 'image' | 'video' | 'audio' | 'document';
+      fileName?: string;
+      messageId: string;
+      createdAt: string;
+    }
   | { type: 'TOGGLE_AI'; conversationId: string }
   | { type: 'ADD_TAG'; contactId: string; tagId: string }
   | { type: 'REMOVE_TAG'; contactId: string; tagId: string }

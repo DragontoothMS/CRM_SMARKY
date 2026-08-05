@@ -127,6 +127,42 @@ export function workspaceReducer(
       };
     }
 
+    case 'SEND_MEDIA': {
+      const conversation = state.conversations[action.conversationId];
+      if (!conversation) return state;
+      const message: Message = {
+        id: action.messageId,
+        conversationId: action.conversationId,
+        channel: 'whatsapp' as const,
+        direction: 'outbound',
+        senderType: 'human',
+        contentType: action.contentType,
+        text: action.text || undefined,
+        mediaUrl: action.mediaUrl,
+        fileName: action.fileName,
+        status: 'sent' as const,
+        createdAt: action.createdAt,
+      };
+      const msgs = state.messagesByConversation[action.conversationId] ?? [];
+      const existingIds = new Set(msgs.map(m => m.id));
+      if (existingIds.has(message.id)) return state;
+      return {
+        ...state,
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [action.conversationId]: [...msgs, message],
+        },
+        conversations: {
+          ...state.conversations,
+          [action.conversationId]: {
+            ...conversation,
+            lastMessageId: message.id,
+            lastMessageAt: message.createdAt,
+          },
+        },
+      };
+    }
+
     case 'UPDATE_MESSAGE_ID': {
       const { conversationId, oldId, newId, externalId } = action;
       const msgs = state.messagesByConversation[conversationId];

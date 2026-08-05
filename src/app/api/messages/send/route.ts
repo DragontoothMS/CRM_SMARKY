@@ -5,7 +5,7 @@ const KAPSO_API_KEY = process.env.KAPSO_API_KEY || '';
 
 export async function POST(request: Request) {
   try {
-    const { phoneNumberId: rawPhoneNumberId, to, body, type = 'text' } = await request.json();
+    const { phoneNumberId: rawPhoneNumberId, to, body, type = 'text', mediaId } = await request.json();
 
     if (!to || !body) {
       return NextResponse.json({ error: 'Missing required fields: to, body' }, { status: 400 });
@@ -33,6 +33,10 @@ export async function POST(request: Request) {
       payload.text = { body, preview_url: false };
     } else if (type === 'template') {
       payload.template = body;
+    } else if (['image', 'video', 'audio', 'document'].includes(type) && mediaId) {
+      payload[type] = { id: mediaId, caption: body };
+    } else {
+      payload.text = { body, preview_url: false };
     }
 
     const response = await fetch(apiUrl, {

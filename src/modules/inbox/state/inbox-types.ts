@@ -35,6 +35,12 @@ export type InboxDomainAction =
       messageId: string;
       createdAt: string;
     }
+  | {
+      type: 'SEND_MEDIA';
+      conversationId: string;
+      file: File;
+      caption: string;
+    }
   | { type: 'TOGGLE_AI'; conversationId: string }
   | { type: 'ADD_TAG'; contactId: string; tagId: string }
   | { type: 'REMOVE_TAG'; contactId: string; tagId: string }

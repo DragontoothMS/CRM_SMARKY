@@ -6,9 +6,10 @@ import { useWorkspace } from '@/modules/workspace/state/workspace-context';
 import { inboxUiReducer, loadPersistedState } from './inbox-reducer';
 import type { InboxAction, InboxState } from './inbox-types';
 
-interface InboxContextValue {
+export interface InboxContextValue {
   state: InboxState;
   dispatch: React.Dispatch<InboxAction>;
+  sendMedia: (file: File, caption?: string) => Promise<void>;
 }
 
 export const InboxContext = createContext<InboxContextValue | null>(null);
@@ -22,7 +23,7 @@ export const InboxContext = createContext<InboxContextValue | null>(null);
  * antes del estado compartido: ninguno tuvo que cambiar.
  */
 export function InboxProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
-  const { state: workspace, dispatch: workspaceDispatch, sendMessage, setActiveConversationId } = useWorkspace();
+  const { state: workspace, dispatch: workspaceDispatch, sendMessage, sendMedia, setActiveConversationId } = useWorkspace();
   const [ui, uiDispatch] = useReducer(inboxUiReducer, null, () => loadPersistedState());
   // `?c=<conversationId>` permite entrar desde Contactos o Pipeline.
   const conversationParam = useSearchParams().get('c');
@@ -46,8 +47,11 @@ export function InboxProvider({ children, fallback }: { children: ReactNode; fal
           return;
         }
         case 'SEND_MESSAGE': {
-          // Enviar por API Kapso + actualizar estado local
           sendMessage(action.conversationId, action.text);
+          return;
+        }
+        case 'SEND_MEDIA': {
+          sendMedia(action.conversationId, action.file, action.caption);
           return;
         }
         case 'SET_CHANNEL_FILTER':
@@ -70,7 +74,7 @@ export function InboxProvider({ children, fallback }: { children: ReactNode; fal
         }
       }
     },
-    [workspaceDispatch, sendMessage, setActiveConversationId],
+    [workspaceDispatch, sendMessage, sendMedia, setActiveConversationId],
   );
 
   /*
@@ -101,8 +105,11 @@ export function InboxProvider({ children, fallback }: { children: ReactNode; fal
     return {
       state: { ...workspace, ...ui, selectedConversationId },
       dispatch: inboxDispatch,
+      sendMedia: (file: File, caption?: string) => {
+        return sendMedia(selectedConversationId ?? '', file, caption ?? '');
+      },
     };
-  }, [workspace, ui, inboxDispatch]);
+  }, [workspace, ui, inboxDispatch, sendMedia]);
 
   if (!value) return <>{fallback}</>;
   return <InboxContext.Provider value={value}>{children}</InboxContext.Provider>;
