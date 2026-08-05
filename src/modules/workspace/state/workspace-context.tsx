@@ -256,9 +256,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } catch {
       dispatch({ type: 'FAIL_MESSAGE', conversationId, messageId: localId });
     }
-    finally {
-      URL.revokeObjectURL(mediaUrl);
-    }
+    // NOTE: no revokeObjectURL(mediaUrl) here — el mensaje optimista lo usa como
+    // preview hasta que Kapso firme la URL real (mediaData.url). El reducer preserva
+    // el mediaUrl local cuando el poll refresca y el server aún no devuelve el url.
+    // El Blob se libera al GC cuando el mensaje es reemplazado por el del server.
   }, [state, dispatch]);
 
   const value = useMemo(

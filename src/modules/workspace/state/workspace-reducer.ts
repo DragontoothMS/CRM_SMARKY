@@ -49,19 +49,37 @@ export function workspaceReducer(
           existingTexts.set(m.text, Date.parse(m.createdAt) || now);
         }
       }
-      const newMsgs = messageList.filter(m => {
-        if (existingIds.has(m.id)) return false;
+      const newMsgs: typeof messageList = [];
+      for (const m of messageList) {
+        if (existingIds.has(m.id)) {
+          // Mensaje ya existe en estado local (optimistic con Blob URL / UUID).
+          // Reemplazarlo con el del server para tomar el mediaData.url firmado por
+          // WhatsApp, preservando el mediaUrl local si el server aún no lo firma.
+          const existingMsg = existing.find(e => e.id === m.id);
+          if (existingMsg) {
+            const merged = { ...m } as Message;
+            if (!merged.mediaUrl && existingMsg.mediaUrl) {
+              merged.mediaUrl = existingMsg.mediaUrl;
+            }
+            merged.mediaUrl = merged.mediaUrl || existingMsg.mediaUrl;
+            merged.status = (merged.status || existingMsg.status) as Message['status'];
+            const idx = existing.findIndex(e => e.id === m.id);
+            existing[idx] = merged;
+            changed = true;
+          }
+          continue;
+        }
         // Evitar duplicados: si es un mensaje saliente con mismo texto y mismo minuto, skip
-        if (m.direction === 'outbound' && m.text) {
-          const existingTime = existingTexts.get(m.text);
+        if (m.direction === 'outbound' && (m as Message).text) {
+          const existingTime = existingTexts.get((m as Message).text || '');
           if (existingTime) {
             const msgTime = Date.parse(m.createdAt);
-            if (Math.abs(msgTime - existingTime) < 60000) return false; // misma ventana de 1 min
+            if (Math.abs(msgTime - existingTime) < 60000) continue; // misma ventana de 1 min
           }
         }
-        return true;
-      });
-      if (newMsgs.length > 0) {
+        newMsgs.push(m as Message);
+      }
+      if (newMsgs.length > 0 || changed) {
         msgs[convId] = [...existing, ...newMsgs];
         changed = true;
       }
